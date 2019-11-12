@@ -1,1 +1,306 @@
-`dsfdfdfdf`
+**Текст главной формы fmMain**
+
+unit main666;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, DM, Forms,
+  Dialogs, Grids, DBGrids, StdCtrls, Menus, ComCtrls, ExtCtrls, ActnList;
+
+type
+  TfmMain = class(TForm)
+    Panel1: TPanel;
+    StatusBar1: TStatusBar;
+    MainMenu1: TMainMenu;
+    mFile: TMenuItem;
+    mExit: TMenuItem;
+    mRefresh: TMenuItem;
+    buExit: TButton;
+    DBGrid1: TDBGrid;
+    ActionList1: TActionList;
+    acQuit: TAction;
+    acRefresh: TAction;
+    buAdd: TButton;
+    buEdit: TButton;
+    buDelete: TButton;
+    mTabl: TMenuItem;
+    mAdd: TMenuItem;
+    mEdit: TMenuItem;
+    mDelete: TMenuItem;
+    procedure FormShow(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure acQuitExecute(Sender: TObject);
+    procedure buAddClick(Sender: TObject);
+    procedure buEditClick(Sender: TObject);
+    procedure buDeleteClick(Sender: TObject);
+    procedure acRefreshExecute(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  fmMain: TfmMain;
+
+implementation
+
+uses Add, Edit;
+
+{$R *.dfm}
+
+procedure TfmMain.acQuitExecute(Sender: TObject);
+begin
+  Application.Terminate;
+end;
+
+procedure TfmMain.buAddClick(Sender: TObject);
+begin
+  //Создаем форму Add
+  fmAdd := TfmAdd.Create(Application);
+  //Выполняем на этой форме добавление записи
+  if fmAdd.ShowModal = mrOK then
+  begin
+    //Подтверждаем транзакцию
+    dmOBJECTS.dstOBJECTS.Post;
+    StatusBar1.Panels[1].Text := IntToStr(dmOBJECTS.dstOBJECTS.RecordCount);
+  end
+  //или откатываем ее
+  else dmOBJECTS.dstOBJECTS.Cancel;
+end;
+
+procedure TfmMain.buDeleteClick(Sender: TObject);
+begin
+with dmOBJECTS do
+  begin
+    if dstOBJECTS.RecordCount= 0 then exit;
+    if Application.MessageBox('Удалить текущую запись?', 'Удаление',
+       MB_YESNO) = mrYes then dstOBJECTS.Delete;
+    StatusBar1.Panels[1].Text := IntToStr(dstOBJECTS.RecordCount);
+  end;
+end;
+
+procedure TfmMain.buEditClick(Sender: TObject);
+begin
+//Проверить существуют ли записи в таблице
+  if dmOBJECTS.dstOBJECTS.RecordCount = 0  then exit;
+  //Создать форму fmEdit
+  fmEdit := TfmEdit.Create(Application);
+   //Выполняем на этой форме изменение записи
+  if fmEdit.ShowModal = mrOK then
+  begin
+    //Подтверждаем транзакцию
+    dmOBJECTS.dstOBJECTS.Post;
+    StatusBar1.Panels[1].Text := IntToStr(dmOBJECTS.dstOBJECTS.RecordCount);
+  end
+  //или откатываем ее
+  else dmOBJECTS.dstOBJECTS.Cancel;
+end;
+
+procedure TfmMain.acRefreshExecute(Sender: TObject);
+begin
+  //Запрос закрывается
+  dmOBJECTS.dstOBJECTS.Active :=False;
+  //Закрываем связь с базой данных
+  dmOBJECTS.dbOBJECTS.Connected :=False;
+  dmOBJECTS.dbOBJECTS.Connected :=True;
+  //Активизируем запрос
+  dmOBJECTS.dstOBJECTS.Active :=True;
+  //Обновляем набор данных dstUchet
+  dmOBJECTS.dstOBJECTS.FullRefresh;
+  //Выводим количество записей в таблице OBJECTS
+  StatusBar1.Panels[1].Text :=
+  IntToStr(dmOBJECTS.dstOBJECTS.RecordCount);
+end;
+
+procedure TfmMain.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  with dmOBJECTS.dsOBJECTS do
+  begin
+//Запрос закрывается.
+dmOBJECTS.dstOBJECTS.Active := True;
+//Закрываем связь с базой данных
+dmOBJECTS.dbOBJECTS.Connected := False;
+end;
+end;
+
+procedure TfmMain.FormShow(Sender: TObject);
+begin
+//Открыть базу данных
+  with dmOBJECTS.dsOBJECTS do
+  begin
+  //Устанавливаем связь с базой данных
+    dmOBJECTS.dbOBJECTS.Connected:=True;
+    dmOBJECTS.dstOBJECTS.Active := True;
+    dmOBJECTS.dstOBJECTS.FullRefresh;
+    //Выводим количество записей в таблице OBJECTS
+    StatusBar1.Panels[1].Text :=
+    IntToStr(dmOBJECTS.dstOBJECTS.RecordCount);
+  end;
+end;
+
+end.
+
+Текст модуля DM
+
+unit DM;
+
+interface
+
+uses
+  SysUtils, Classes, DB, FIBDataSet, pFIBDataSet, FIBDatabase, pFIBDatabase;
+
+type
+  TdmOBJECTS = class(TDataModule)
+    dbOBJECTS: TpFIBDatabase;
+    ReadTransaction: TpFIBTransaction;
+    WriteTransaction: TpFIBTransaction;
+    dstOBJECTS: TpFIBDataSet;
+    dsOBJECTS: TDataSource;
+    dstOBJECTSID: TFIBIntegerField;
+    dstOBJECTSNAME: TFIBStringField;
+    dstOBJECTSDATA: TFIBDateField;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  dmOBJECTS: TdmOBJECTS;
+
+implementation
+
+{$R *.dfm}
+
+end.
+
+Текст модуля Add
+
+unit Add;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, ExtCtrls, StdCtrls, ComCtrls;
+
+type
+  TfmAdd = class(TForm)
+    Panel1: TPanel;
+    buOk: TButton;
+    byCancel: TButton;
+    Panel2: TPanel;
+    Label1: TLabel;
+    Label2: TLabel;
+    edNAME: TEdit;
+    edDATA: TDateTimePicker;
+    procedure buOkClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  fmAdd: TfmAdd;
+
+implementation
+
+uses DM;
+
+{$R *.dfm}
+
+procedure TfmAdd.buOkClick(Sender: TObject);
+begin
+with dmOBJECTS do
+  begin
+    //Включаем набор данных в режим добавления записи
+    dstOBJECTS.Insert;
+    //Заносим введенные значения в набор данных dstPhone
+    dstOBJECTS.FBN('NAME').AsString := edNAME.Text;
+    dstOBJECTS.FBN('DATA').AsDateTime := edDATA.Date;
+    end;
+end;
+
+procedure TfmAdd.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+//Удаляем форму из памяти компьютера
+  Action := caFree;
+  fmAdd := nil;
+end;
+
+end.
+
+Текст модуля Edit
+
+unit Edit;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, ComCtrls;
+
+type
+  TfmEdit = class(TForm)
+    Panel1: TPanel;
+    buOk: TButton;
+    byCancel: TButton;
+    Panel2: TPanel;
+    Label1: TLabel;
+    Label2: TLabel;
+    edNAME: TEdit;
+    edDATA: TDateTimePicker;
+    procedure FormShow(Sender: TObject);
+    procedure buOkClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  fmEdit: TfmEdit;
+
+implementation
+
+uses Add, DM;
+
+{$R *.dfm}
+
+
+procedure TfmEdit.buOkClick(Sender: TObject);
+begin
+with dmOBJECTS do
+  begin
+    //Включаем набор данных в режим изменения записи
+    dstOBJECTS.Edit;
+    //Заносим введенные значения в набор данных dstPhone
+    dstOBJECTS.FBN('NAME').AsString := edNAME.Text;
+    dstOBJECTS.FBN('DATA').AsDateTime := edDATA.Date;
+  end;
+end;
+
+
+procedure TfmEdit.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+//Удаляем форму из памяти компьютера
+  Action := caFree;
+  fmEdit := nil;
+end;
+
+procedure TfmEdit.FormShow(Sender: TObject);
+begin
+with dmOBJECTS do
+  begin
+    edNAME.Text := dstOBJECTS.FBN('NAME').AsString;
+    edDATA.Date := dstOBJECTS.FBN('DATA').AsDateTime;
+  end;
+  edNAME.SetFocus;
+end;
+
+end.
